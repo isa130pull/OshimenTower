@@ -15,6 +15,9 @@ public class GameManager : MonoBehaviour {
 	[SerializeField]
 	private SpriteRenderer cloudImage;
 
+	[SerializeField]
+	private Text debugText;
+
 	private GameObject oshimen;
 
 	private bool isMyTurn = true;
@@ -24,7 +27,6 @@ public class GameManager : MonoBehaviour {
 	}
 
 	void Start () {
-		CreateOshimen();
 		this.rotateButton.OnClickAsObservable()
 			.Subscribe(_ =>
 			{
@@ -45,7 +47,11 @@ public class GameManager : MonoBehaviour {
 			{
 				CreateOshimen();
 			});
+
+		// Photonに接続する(引数でゲームのバージョンを指定できる)
+        PhotonNetwork.ConnectUsingSettings(null);
 	}
+
 	
 	// Update is called once per frame
 	void Update () {
@@ -66,7 +72,38 @@ public class GameManager : MonoBehaviour {
 	private void CreateOshimen()
 	{
 		var oshimen = Resources.Load("oshimenObject") as GameObject;		
-		this.oshimen = Instantiate(oshimen);
+		this.oshimen = PhotonNetwork.Instantiate("oshimenObject",oshimen.transform.position,Quaternion.identity,0);
+	}
+
+	// ロビーに入ると呼ばれる
+    void OnJoinedLobby() {
+        Debug.Log("ロビーに入りました。");
+		debugText.text = "ロビーに入りました。";
+ 
+        // ルームに入室する
+        PhotonNetwork.JoinRandomRoom();
+    }
+ 
+    // ルームに入室すると呼ばれる
+    void OnJoinedRoom() {
+		debugText.text = "ルームへ入室しました。";
+        Debug.Log("ルームへ入室しました。");
+		CreateOshimen();
+    }
+ 
+    // ルームの入室に失敗すると呼ばれる
+    void OnPhotonRandomJoinFailed() {
+		debugText.text = "ルームの入室に失敗しました。";
+        Debug.Log("ルームの入室に失敗しました。");
+ 
+        // ルームがないと入室に失敗するため、その時は自分で作る
+        // 引数でルーム名を指定できる
+        PhotonNetwork.CreateRoom("myRoomName");
+    }
+
+	void OnPhotonPlayerConnected( PhotonPlayer newPlayer ) {
+		debugText.text = "誰かがルームに入室しました。";
+        Debug.Log("誰かがルームに入室しました。");		
 	}
 
 
