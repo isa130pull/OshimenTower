@@ -38,7 +38,7 @@ public class OshimenObject : MonoBehaviour {
 			isPointer = EventSystem.current.IsPointerOverGameObject(Input.GetTouch(0).fingerId);
 		#endif
 
-		if(isPointer || !isKinematic || this.IsGround){
+		if(isPointer || !isKinematic || this.IsGround || !GameManager.IsMyTurn){
             return;
         }
 
@@ -52,6 +52,7 @@ public class OshimenObject : MonoBehaviour {
 		{			
 			var touchPos = Camera.main.ScreenToWorldPoint(GodTouch.GetPosition());
 			transform.position = new Vector3(touchPos.x,transform.position.y);
+			Debug.Log(name);
 		}
 		else if (phase == GodPhase.Ended && this.isTouch) 
 		{
@@ -63,11 +64,17 @@ public class OshimenObject : MonoBehaviour {
 		Observable.Timer(TimeSpan.FromMilliseconds(1000f))
 			.Subscribe(_ =>
 			{
-				this.IsGround = true;
+				PhotonView photonView = PhotonView.Get(this);
+				photonView.RPC("SetIsGround", PhotonTargets.All);
 			});
 	}
 	void OnCollisionExit2D(Collision2D coll) {
 	}
 
+	[PunRPC]
+	void SetIsGround()
+	{
+		this.IsGround = true;
+	}
 
 }

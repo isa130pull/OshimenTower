@@ -593,7 +593,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: DebugText
+  m_Text: 
 --- !u!222 &1441709935
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -776,7 +776,7 @@ MonoBehaviour:
   m_PrefabParentObject: {fileID: 0}
   m_PrefabInternal: {fileID: 0}
   m_GameObject: {fileID: 1971168859}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: bc52f689563c64f358a0bf42c1d158c0, type: 3}
   m_Name: 
@@ -824,6 +824,7 @@ MonoBehaviour:
   rotateButton: {fileID: 715888917}
   cloudImage: {fileID: 1058821122}
   debugText: {fileID: 1441709934}
+  myTurnText: {fileID: 1540593015}
 --- !u!4 &2055046891
 Transform:
   m_ObjectHideFlags: 0

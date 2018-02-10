@@ -18,12 +18,16 @@ public class GameManager : MonoBehaviour {
 	[SerializeField]
 	private Text debugText;
 
+	[SerializeField]
+	private SpriteRenderer myTurnText;
+
 	private GameObject oshimen;
 
-	private bool isMyTurn = true;
+	public static bool IsMyTurn = false;
 
 	void Awake() {
 		Application.targetFrameRate = 60;
+        PhotonNetwork.OnEventCall += OnRaiseEvent;
 	}
 
 	void Start () {
@@ -45,11 +49,16 @@ public class GameManager : MonoBehaviour {
 			.Where(__ => oshimen.GetComponent<OshimenObject>().IsGround)
 			.Subscribe(_ =>
 			{
-				CreateOshimen();
+				Debug.Log("IsGround");
+				IsMyTurn = !IsMyTurn;
+				this.oshimen = null;
+				this.myTurnText.enabled = IsMyTurn;
+				PhotonNetwork.RaiseEvent((byte)1, "Hello!", true, RaiseEventOptions.Default );
 			});
 
 		// Photonに接続する(引数でゲームのバージョンを指定できる)
         PhotonNetwork.ConnectUsingSettings(null);
+		this.myTurnText.enabled = IsMyTurn;
 	}
 
 	
@@ -71,8 +80,10 @@ public class GameManager : MonoBehaviour {
 
 	private void CreateOshimen()
 	{
-		var oshimen = Resources.Load("oshimenObject") as GameObject;		
+		var oshimen = Resources.Load("oshimenObject") as GameObject;
 		this.oshimen = PhotonNetwork.Instantiate("oshimenObject",oshimen.transform.position,Quaternion.identity,0);
+		
+		this.myTurnText.enabled = IsMyTurn;
 	}
 
 	// ロビーに入ると呼ばれる
@@ -88,7 +99,6 @@ public class GameManager : MonoBehaviour {
     void OnJoinedRoom() {
 		debugText.text = "ルームへ入室しました。";
         Debug.Log("ルームへ入室しました。");
-		CreateOshimen();
     }
  
     // ルームの入室に失敗すると呼ばれる
@@ -99,12 +109,28 @@ public class GameManager : MonoBehaviour {
         // ルームがないと入室に失敗するため、その時は自分で作る
         // 引数でルーム名を指定できる
         PhotonNetwork.CreateRoom("myRoomName");
+
+		IsMyTurn = true;
+		this.myTurnText.enabled = IsMyTurn;
     }
 
 	void OnPhotonPlayerConnected( PhotonPlayer newPlayer ) {
 		debugText.text = "誰かがルームに入室しました。";
-        Debug.Log("誰かがルームに入室しました。");		
+        Debug.Log("誰かがルームに入室しました。");
+		CreateOshimen();
+		this.oshimen.name = "First";
 	}
+
+	 private void OnRaiseEvent( byte i_eventcode, object i_content, int i_senderid )
+    {
+		Debug.Log("OnRaiseEvent");
+       //ターンが変更した時に呼ばれる
+		IsMyTurn = !IsMyTurn;
+		this.myTurnText.enabled = IsMyTurn;
+		this.oshimen = null;
+		CreateOshimen();
+		this.oshimen.name = "Second";
+    }
 
 
 }
