@@ -44,4 +44,7 @@ MonoBehaviour:
   - TaggedPlayer
   - SetOshimen
   - TurnChange
+  - ChatMessage
+  - SetIsGround
+  - SetGravity
   DisableAutoOpenWizard: 1

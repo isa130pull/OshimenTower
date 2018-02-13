@@ -11,6 +11,8 @@ public class OshimenObject : MonoBehaviour {
 
 	public bool IsGround = false;
 	private bool isTouch = false;
+
+//	[PunRPC]
 	private void SetGravity(bool isKinematic)
 	{
 		GetComponent<Rigidbody2D>().isKinematic = isKinematic;
@@ -18,7 +20,10 @@ public class OshimenObject : MonoBehaviour {
 
 	// Use this for initialization
 	void Start () {
-		
+		if (!GameManager.IsMaster)
+		{
+			// gameObject.GetComponent<PolygonCollider2D>().isTrigger = true;
+		}		
 	}
 	
 	// Update is called once per frame
@@ -56,6 +61,7 @@ public class OshimenObject : MonoBehaviour {
 		}
 		else if (phase == GodPhase.Ended && this.isTouch) 
 		{
+			PhotonView photonView = PhotonView.Get(this);
 			SetGravity(false);
 		}
 	}
@@ -74,6 +80,7 @@ public class OshimenObject : MonoBehaviour {
 	[PunRPC]
 	void SetIsGround()
 	{
+		Debug.Log("SetIsGround");
 		this.IsGround = true;
 	}
 

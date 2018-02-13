@@ -25,6 +25,8 @@ public class GameManager : MonoBehaviour {
 
 	public static bool IsMyTurn = false;
 
+	public static bool IsMaster = false;
+
 	void Awake() {
 		Application.targetFrameRate = 60;
         PhotonNetwork.OnEventCall += OnRaiseEvent;
@@ -50,9 +52,9 @@ public class GameManager : MonoBehaviour {
 			.Subscribe(_ =>
 			{
 				Debug.Log("IsGround");
-				IsMyTurn = !IsMyTurn;
-				this.oshimen = null;
+				IsMyTurn = false;
 				this.myTurnText.enabled = IsMyTurn;
+				this.oshimen = null;
 				PhotonNetwork.RaiseEvent((byte)1, "Hello!", true, RaiseEventOptions.Default );
 			});
 
@@ -68,6 +70,7 @@ public class GameManager : MonoBehaviour {
 
 	}
 
+	// 雲の移動
 	private void MoveCloud()
 	{
 		var cloudPos = this.cloudImage.transform.position;
@@ -117,19 +120,22 @@ public class GameManager : MonoBehaviour {
 	void OnPhotonPlayerConnected( PhotonPlayer newPlayer ) {
 		debugText.text = "誰かがルームに入室しました。";
         Debug.Log("誰かがルームに入室しました。");
+		IsMaster = true;
 		CreateOshimen();
-		this.oshimen.name = "First";
 	}
 
 	 private void OnRaiseEvent( byte i_eventcode, object i_content, int i_senderid )
     {
 		Debug.Log("OnRaiseEvent");
        //ターンが変更した時に呼ばれる
-		IsMyTurn = !IsMyTurn;
-		this.myTurnText.enabled = IsMyTurn;
-		this.oshimen = null;
-		CreateOshimen();
-		this.oshimen.name = "Second";
+	   switch (i_eventcode)
+	   {
+			case 1:
+			IsMyTurn = true;
+			this.oshimen = null;
+			CreateOshimen();
+			break;
+	   }
     }
 
 
