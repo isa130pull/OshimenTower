@@ -47,4 +47,8 @@ MonoBehaviour:
   - ChatMessage
   - SetIsGround
   - SetGravity
+  - SetTransform
+  - RpcIsGround
+  - RpcPosition
+  - RpcRotate
   DisableAutoOpenWizard: 1
