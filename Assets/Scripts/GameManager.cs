@@ -9,6 +9,12 @@ using DG.Tweening;
 
 public class GameManager : MonoBehaviour {
 
+	// 自分のターンかどうかのフラグ
+	public static bool IsMyTurn = false;
+
+	// 部屋のマスター権限を持っているかのフラグ
+	public static bool IsMaster = false;
+
 	[SerializeField]
 	private Button rotateButton;
 
@@ -23,57 +29,53 @@ public class GameManager : MonoBehaviour {
 
 	private GameObject oshimen;
 
-	public static bool IsMyTurn = false;
-
-	public static bool IsMaster = false;
-
 	void Awake() {
 		Application.targetFrameRate = 60;
+
+		// OnRaiseEventをコールバック登録
         PhotonNetwork.OnEventCall += OnRaiseEvent;
 	}
 
 	void Start () {
-		this.rotateButton.OnClickAsObservable()
-			.Subscribe(_ =>
-			{
-				Debug.Log("Click");
-				if (this.oshimen)
-				{
-					Debug.Log("oshimen not null");
-					var currentRotate = this.oshimen.transform.rotation.eulerAngles.z;
-					this.oshimen.transform.DORotate(new Vector3(0,0,currentRotate + 45f),0.2f)
-						.SetEase(Ease.Linear);
-				}
-			});
-		
-		this.UpdateAsObservable()
-			.Where(_ => oshimen)
-			.Where(__ => oshimen.GetComponent<OshimenObject>().IsGround)
-			.Subscribe(_ =>
-			{
-				Debug.Log("IsGround");
-				IsMyTurn = false;
-				this.myTurnText.enabled = IsMyTurn;
-				this.oshimen = null;
-				PhotonNetwork.RaiseEvent((byte)1, "Hello!", true, RaiseEventOptions.Default );
-			});
-
 		// Photonに接続する(引数でゲームのバージョンを指定できる)
         PhotonNetwork.ConnectUsingSettings(null);
-		this.myTurnText.enabled = IsMyTurn;
+		this.myTurnText.enabled = false;
+
+		// 回転ボタン押下時
+		this.rotateButton.OnClickAsObservable()
+			.Where(_ => IsMyTurn && this.oshimen.GetComponent<Rigidbody2D>().isKinematic)
+			.Subscribe(_ =>
+			{
+				// 45度回転させる
+				this.oshimen.GetComponent<OshimenObject>().Rotate45();
+			});
+		
+		// オブジェクトが着地したかどうかをチェックする
+		this.UpdateAsObservable()
+			.Where(_ => this.oshimen)
+			.Where(__ => this.oshimen.GetComponent<OshimenObject>().IsGround)
+			.Subscribe(_ =>
+			{
+				Debug.Log("ターンエンド");
+				// 自分のターンを終え、相手のターンに移行
+				IsMyTurn = this.myTurnText.enabled = false;
+				this.oshimen = null;
+				//TODO: 現在は１件しか飛ばすものがないので引数は仮値
+				PhotonNetwork.RaiseEvent((byte)1, "TurnEnd", true, RaiseEventOptions.Default );
+			});
 	}
 
 	
 	// Update is called once per frame
 	void Update () {
 		MoveCloud();
-
 	}
 
 	// 雲の移動
 	private void MoveCloud()
 	{
 		var cloudPos = this.cloudImage.transform.position;
+		// 画面左端まで行ったら右端に移動させる
 		if (cloudPos.x <= - 3.8f)
 		{
 			cloudPos.x = 4.0f;
@@ -81,18 +83,20 @@ public class GameManager : MonoBehaviour {
 		this.cloudImage.transform.position = new Vector3(cloudPos.x - 0.005f, cloudPos.y);
 	}
 
+	// オブジェクトを生成
 	private void CreateOshimen()
 	{
 		var oshimen = Resources.Load("oshimenObject") as GameObject;
 		this.oshimen = PhotonNetwork.Instantiate("oshimenObject",oshimen.transform.position,Quaternion.identity,0);
 		
-		this.myTurnText.enabled = IsMyTurn;
+		IsMyTurn = this.myTurnText.enabled = true;
 	}
 
 	// ロビーに入ると呼ばれる
     void OnJoinedLobby() {
-        Debug.Log("ロビーに入りました。");
-		debugText.text = "ロビーに入りました。";
+		string message = "ロビーに入りました。";
+        Debug.Log(message);
+		debugText.text = message;
  
         // ルームに入室する
         PhotonNetwork.JoinRandomRoom();
@@ -100,42 +104,38 @@ public class GameManager : MonoBehaviour {
  
     // ルームに入室すると呼ばれる
     void OnJoinedRoom() {
-		debugText.text = "ルームへ入室しました。";
-        Debug.Log("ルームへ入室しました。");
+		string message = "ルームへ入室しました。";
+		debugText.text = message;
+        Debug.Log(message);
     }
  
     // ルームの入室に失敗すると呼ばれる
     void OnPhotonRandomJoinFailed() {
-		debugText.text = "ルームの入室に失敗しました。";
-        Debug.Log("ルームの入室に失敗しました。");
+		string message = "ルームの入室に失敗しました。";
+		debugText.text = message;
+        Debug.Log(message);
  
         // ルームがないと入室に失敗するため、その時は自分で作る
         // 引数でルーム名を指定できる
         PhotonNetwork.CreateRoom("myRoomName");
-
-		IsMyTurn = true;
-		this.myTurnText.enabled = IsMyTurn;
     }
 
 	void OnPhotonPlayerConnected( PhotonPlayer newPlayer ) {
-		debugText.text = "誰かがルームに入室しました。";
-        Debug.Log("誰かがルームに入室しました。");
-		IsMaster = true;
+		string message = "誰かがルームに入室しました。";
+		debugText.text = message;
+        Debug.Log(message);
+
+		// 他の誰かが入ってきた = 自身がマスター判定
+		IsMaster = IsMyTurn = true;
 		CreateOshimen();
 	}
 
 	 private void OnRaiseEvent( byte i_eventcode, object i_content, int i_senderid )
     {
+        // ターンが変更した時に呼ばれる
 		Debug.Log("OnRaiseEvent");
-       //ターンが変更した時に呼ばれる
-	   switch (i_eventcode)
-	   {
-			case 1:
-			IsMyTurn = true;
-			this.oshimen = null;
-			CreateOshimen();
-			break;
-	   }
+		this.oshimen = null;
+		CreateOshimen();
     }
 
 

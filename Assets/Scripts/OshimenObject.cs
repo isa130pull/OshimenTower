@@ -5,6 +5,7 @@ using DG.Tweening;
 using GodTouches;
 using UnityEngine.EventSystems;
 using UniRx;
+using UniRx.Triggers;
 using System;
 
 public class OshimenObject : MonoBehaviour {
@@ -20,17 +21,22 @@ public class OshimenObject : MonoBehaviour {
 		PhotonView.Get(this).RPC("RpcRotate", PhotonTargets.All);
 	}
 
-	// Update is called once per frame
-	private void Update () {
+	private void Start()
+	{
 		// オブジェクトが画面外に出た時
 		// TODO: オブジェクト削除ではなく、ゲームオーバー判定に用いる
-		if (Mathf.Abs(transform.position.x) > 4.0f || Mathf.Abs(transform.position.y) > 8.0f)
-		{
-			Debug.Log("Destroy");
-			Destroy(gameObject);
-			return;
-		}
+		this.UpdateAsObservable()
+			.Where(_ => Mathf.Abs(transform.position.x) > 4.0f || Mathf.Abs(transform.position.y) > 8.0f && this.IsGround)
+			.Subscribe(_ =>
+			{
+				Debug.Log("DestroyObject");
+				Destroy(gameObject);
+				return;
+			});
+	}
 
+	private void Update () 
+	{
 		bool isButtonTouches;
 		// ボタンタップ中か否か
 		#if UNITY_EDITOR
@@ -57,19 +63,19 @@ public class OshimenObject : MonoBehaviour {
 	{
 	    // タッチを検出して動かす
 		var phase = GodTouch.GetPhase ();
+		var touchPos = Camera.main.ScreenToWorldPoint(GodTouch.GetPosition());
 		if (phase == GodPhase.Began) 
 		{
 			this.isTouch = true;
 		}
 		else if (phase == GodPhase.Moved && this.isTouch)
 		{			
-			var touchPos = Camera.main.ScreenToWorldPoint(GodTouch.GetPosition());
 			PhotonView.Get(this).RPC("RpcPosition", PhotonTargets.All,touchPos);
 		}
 		else if (phase == GodPhase.Ended && this.isTouch) 
 		{
 			// 物理判定を適用させる(重力による自由落下含)
-			PhotonView.Get(this).RPC("RpcSetKinematic", PhotonTargets.All,false);
+			PhotonView.Get(this).RPC("RpcSetKinematic", PhotonTargets.All, touchPos, false);
 			this.isTouch = false;
 		}
 	}
@@ -77,6 +83,7 @@ public class OshimenObject : MonoBehaviour {
 	// 他オブジェクトに当たった瞬間呼ばれる
 	private void OnCollisionEnter2D(Collision2D coll) {
 		Observable.Timer(TimeSpan.FromMilliseconds(1000f))
+			.Where(_ => !this.IsGround)
 			.Subscribe(_ =>
 			{
 				// 他オブジェクトに当たって一定時間経過 = 着地した判定
@@ -114,8 +121,12 @@ public class OshimenObject : MonoBehaviour {
 	}
 
 	// RPC経由でKinematicのフラグを同期させる
-	private void RpcSetKinematic(bool isKinematic)
+	[PunRPC]
+	private void RpcSetKinematic(Vector3 touchPos, bool isKinematic)
 	{
+		// ポジションを同期
+		transform.position = new Vector3(touchPos.x,transform.position.y);
+		// Kinematicフラグを同期
 		GetComponent<Rigidbody2D>().isKinematic = isKinematic;
 	}
 

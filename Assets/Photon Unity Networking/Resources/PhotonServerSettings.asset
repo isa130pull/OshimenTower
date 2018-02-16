@@ -51,4 +51,5 @@ MonoBehaviour:
   - RpcIsGround
   - RpcPosition
   - RpcRotate
+  - RpcSetKinematic
   DisableAutoOpenWizard: 1
