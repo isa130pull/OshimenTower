@@ -23,7 +23,29 @@ namespace Tower.Object
 			PhotonView.Get(this).RPC("RpcRotate", PhotonTargets.All);
 		}
 
-		private void Start()
+		// タップ中の操作やタップエンド処理
+		protected void TouchProcess()
+		{
+			// タッチを検出して動かす
+			var phase = GodTouch.GetPhase ();
+			var touchPos = Camera.main.ScreenToWorldPoint(GodTouch.GetPosition());
+			if (phase == GodPhase.Began) 
+			{
+				this.isTouch = true;
+			}
+			else if (phase == GodPhase.Moved && this.isTouch)
+			{			
+				PhotonView.Get(this).RPC("RpcPosition", PhotonTargets.All,touchPos);
+			}
+			else if (phase == GodPhase.Ended && this.isTouch) 
+			{
+				// 物理判定を適用させる(重力による自由落下含)
+				PhotonView.Get(this).RPC("RpcSetKinematic", PhotonTargets.All, touchPos, false);
+				this.isTouch = false;
+			}
+		}
+
+		protected void ObjectDestroyCheck()
 		{
 			// オブジェクトが画面外に出た時
 			// TODO: オブジェクト削除ではなく、ゲームオーバー判定に用いる
@@ -35,6 +57,11 @@ namespace Tower.Object
 					Destroy(gameObject);
 					return;
 				});
+		}
+
+		private void Start()
+		{
+			ObjectDestroyCheck();
 		}
 
 		private void Update () 
@@ -58,28 +85,6 @@ namespace Tower.Object
 			}
 
 			TouchProcess();
-		}
-
-		// タップ中の操作やタップエンド処理
-		private void TouchProcess()
-		{
-			// タッチを検出して動かす
-			var phase = GodTouch.GetPhase ();
-			var touchPos = Camera.main.ScreenToWorldPoint(GodTouch.GetPosition());
-			if (phase == GodPhase.Began) 
-			{
-				this.isTouch = true;
-			}
-			else if (phase == GodPhase.Moved && this.isTouch)
-			{			
-				PhotonView.Get(this).RPC("RpcPosition", PhotonTargets.All,touchPos);
-			}
-			else if (phase == GodPhase.Ended && this.isTouch) 
-			{
-				// 物理判定を適用させる(重力による自由落下含)
-				PhotonView.Get(this).RPC("RpcSetKinematic", PhotonTargets.All, touchPos, false);
-				this.isTouch = false;
-			}
 		}
 
 		// 他オブジェクトに当たった瞬間呼ばれる

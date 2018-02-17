@@ -15,6 +15,8 @@ namespace Tower
 		// 自分のターンかどうかのフラグ
 		public static bool IsMyTurn = false;
 
+		public static GameStatus Status;
+
 		// 部屋のマスター権限を持っているかのフラグ
 		public static bool IsMaster = false;
 
@@ -32,16 +34,18 @@ namespace Tower
 
 		private GameObject oshimen;
 
+
+
 		void Awake() {
 			Application.targetFrameRate = 60;
 
 			// OnRaiseEventをコールバック登録
 			PhotonNetwork.OnEventCall += OnRaiseEvent;
+			// Photonに接続する(引数でゲームのバージョンを指定できる)
+			PhotonNetwork.ConnectUsingSettings(null);
 		}
 
 		void Start () {
-			// Photonに接続する(引数でゲームのバージョンを指定できる)
-			PhotonNetwork.ConnectUsingSettings(null);
 			this.myTurnText.enabled = false;
 
 			// 回転ボタン押下時
@@ -67,6 +71,10 @@ namespace Tower
 					//TODO: 現在は１件しか飛ばすものがないので引数は仮値
 					PhotonNetwork.RaiseEvent((byte)1, "TurnEnd", true, RaiseEventOptions.Default );
 				});
+
+			this.UpdateAsObservable()
+				.Where(_ => Status == GameStatus.ConnectionWait && Input.GetMouseButtonDown (0))
+				.Subscribe(__ => CreateLocalOshimen() );
 		}
 
 		
@@ -111,6 +119,13 @@ namespace Tower
 			string message = "ルームへ入室しました。";
 			debugText.text = message;
 			Debug.Log(message);
+
+			// 1人 = 接続待ち状態
+			if (PhotonNetwork.countOfPlayersOnMaster == 1)
+			{
+				Status = GameStatus.ConnectionWait;
+				Debug.Log("GameStatus.ConnectionWait" + Status);
+			}
 		}
 	
 		// ルームの入室に失敗すると呼ばれる
@@ -142,6 +157,18 @@ namespace Tower
 			CreateOshimen();
 		}
 
+		// 通信待ち状態の時にローカル用のオブジェクト生成
+		private void CreateLocalOshimen()
+		{
+			Debug.Log("CreateLocalOshimen");
+			var touchPos = Camera.main.ScreenToWorldPoint(GodTouch.GetPosition());
+			// if (GodTouch.GetPhase () == GodPhase.Ended) 
+			// {
+			var oshimen = Resources.Load("oshimenLocalObject") as GameObject;
+			Vector3 createPos = new Vector3(touchPos.x, oshimen.transform.position.y);
+			Instantiate(oshimen, createPos, Quaternion.identity);
+//			}
+		}
 
 	}
 }
