@@ -13,7 +13,7 @@ namespace Tower
 	public class GameManager : MonoBehaviour {
 
 		// 自分のターンかどうかのフラグ
-		public static bool IsMyTurn = false;
+		// public static bool IsMyTurn = false;
 
 		public static GameStatus Status;
 
@@ -31,6 +31,9 @@ namespace Tower
 
 		[SerializeField]
 		private SpriteRenderer myTurnText;
+
+		[SerializeField]
+		private GameObject localObjectBase;
 
 		private GameObject oshimen;
 
@@ -51,7 +54,7 @@ namespace Tower
 			// 回転ボタン押下時
 			this.rotateButton.OnClickAsObservable()
 				.Where(_ => this.oshimen)
-				.Where(_ => IsMyTurn && this.oshimen.GetComponent<Rigidbody2D>().isKinematic)
+				.Where(_ => Status == GameStatus.PlayerTurn && this.oshimen.GetComponent<Rigidbody2D>().isKinematic)
 				.Subscribe(_ =>
 				{
 					// 45度回転させる
@@ -66,7 +69,8 @@ namespace Tower
 				{
 					Debug.Log("ターンエンド");
 					// 自分のターンを終え、相手のターンに移行
-					IsMyTurn = this.myTurnText.enabled = false;
+					this.myTurnText.enabled = false;
+					Status = GameStatus.EnemyTurn;
 					this.oshimen = null;
 					//TODO: 現在は１件しか飛ばすものがないので引数は仮値
 					PhotonNetwork.RaiseEvent((byte)1, "TurnEnd", true, RaiseEventOptions.Default );
@@ -101,7 +105,8 @@ namespace Tower
 			var oshimen = Resources.Load("oshimenObject") as GameObject;
 			this.oshimen = PhotonNetwork.Instantiate("oshimenObject",oshimen.transform.position,Quaternion.identity,0);
 			
-			IsMyTurn = this.myTurnText.enabled = true;
+			this.myTurnText.enabled = true;
+			Status = GameStatus.PlayerTurn;
 		}
 
 		// ロビーに入ると呼ばれる
@@ -126,6 +131,11 @@ namespace Tower
 				Status = GameStatus.ConnectionWait;
 				Debug.Log("GameStatus.ConnectionWait" + Status);
 			}
+			// 2人以上 = 既に誰か入っているので敵側からターンスタート
+			else
+			{
+				Status = GameStatus.EnemyTurn;
+			}
 		}
 	
 		// ルームの入室に失敗すると呼ばれる
@@ -139,13 +149,19 @@ namespace Tower
 			PhotonNetwork.CreateRoom("myRoomName");
 		}
 
+		// 他の誰かが入ってきた = 自身がマスター判定
 		void OnPhotonPlayerConnected( PhotonPlayer newPlayer ) {
 			string message = "誰かがルームに入室しました。";
 			debugText.text = message;
 			Debug.Log(message);
 
-			// 他の誰かが入ってきた = 自身がマスター判定
-			IsMaster = IsMyTurn = true;
+			// ミニゲームのオブジェクトを全部削除
+			foreach (Transform n in this.localObjectBase.transform )
+			{
+				GameObject.Destroy(n.gameObject);
+			}
+			IsMaster = true;	
+			Status = GameStatus.PlayerTurn;
 			CreateOshimen();
 		}
 
@@ -162,12 +178,9 @@ namespace Tower
 		{
 			Debug.Log("CreateLocalOshimen");
 			var touchPos = Camera.main.ScreenToWorldPoint(GodTouch.GetPosition());
-			// if (GodTouch.GetPhase () == GodPhase.Ended) 
-			// {
 			var oshimen = Resources.Load("oshimenLocalObject") as GameObject;
-			Vector3 createPos = new Vector3(touchPos.x, oshimen.transform.position.y);
-			Instantiate(oshimen, createPos, Quaternion.identity);
-//			}
+			var createPos = new Vector3(touchPos.x, touchPos.y);
+			Instantiate(oshimen, createPos, Quaternion.identity, this.localObjectBase.transform);
 		}
 
 	}

@@ -80,7 +80,7 @@ namespace Tower.Object
 			// ②重力設定中(自由落下中)
 			// ③落下済
 			// ④相手ターン
-			if (isButtonTouches || !isKinematic || this.IsGround || !GameManager.IsMyTurn){
+			if (isButtonTouches || !isKinematic || this.IsGround || GameManager.Status == GameStatus.EnemyTurn){
 				return;
 			}
 
