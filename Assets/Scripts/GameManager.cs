@@ -125,13 +125,13 @@ namespace Tower
 			debugText.text = message;
 			Debug.Log(message);
 
-			// 1人 = 接続待ち状態
-			if (PhotonNetwork.countOfPlayersOnMaster == 1)
+			
+			// マスターのみミニゲームモード
+			if (PhotonNetwork.isMasterClient)
 			{
 				Status = GameStatus.ConnectionWait;
 				Debug.Log("GameStatus.ConnectionWait" + Status);
 			}
-			// 2人以上 = 既に誰か入っているので敵側からターンスタート
 			else
 			{
 				Status = GameStatus.EnemyTurn;
